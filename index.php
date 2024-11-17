@@ -4,100 +4,115 @@ function build_calendar($month, $year) {
     $stmt = $mysqli->prepare("SELECT * FROM bookings_record WHERE MONTH(DATE) = ? AND YEAR(DATE) = ?");
     $stmt->bind_param('ss', $month, $year);
     $bookings = array();
-    if($stmt->execute()){
+    if ($stmt->execute()) {
         $result = $stmt->get_result();
-        if($result->num_rows>0){
-            while($row = $result->fetch_assoc()){
+        if ($result->num_rows > 0) {
+            while ($row = $result->fetch_assoc()) {
                 $bookings[] = $row['DATE'];
             }
-            
             $stmt->close();
         }
     }
-    
-    
-     $daysOfWeek = array('Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday');
-     $firstDayOfMonth = mktime(0,0,0,$month,1,$year);
-     $numberDays = date('t',$firstDayOfMonth);
-     $dateComponents = getdate($firstDayOfMonth);
-     $monthName = $dateComponents['month'];
-     $dayOfWeek = $dateComponents['wday'];
+
+    // Set up day names and first day of the month
+    $daysOfWeek = array('Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday');
+    $firstDayOfMonth = mktime(0, 0, 0, $month, 1, $year);
+    $numberDays = date('t', $firstDayOfMonth);
+    $dateComponents = getdate($firstDayOfMonth);
+    $monthName = $dateComponents['month'];
+    $dayOfWeek = $dateComponents['wday'];
 
     $datetoday = date('Y-m-d');
-   
     $calendar = "<table class='table table-bordered'>";
     $calendar .= "<center><h2>$monthName $year</h2>";
-    $calendar.= "<a class='btn btn-xs btn-success' href='?month=".date('m', mktime(0, 0, 0, $month-1, 1, $year))."&year=".date('Y', mktime(0, 0, 0, $month-1, 1, $year))."'>Previous Month</a> ";
-    $calendar.= " <a class='btn btn-xs btn-danger' href='?month=".date('m')."&year=".date('Y')."'>Current Month</a> ";
-    $calendar.= "<a class='btn btn-xs btn-primary' href='?month=".date('m', mktime(0, 0, 0, $month+1, 1, $year))."&year=".date('Y', mktime(0, 0, 0, $month+1, 1, $year))."'>Next Month</a></center><br>";
-    
-   
-      $calendar .= "<tr>";
-     foreach($daysOfWeek as $day) {
-          $calendar .= "<th  class='header'>$day</th>";
-     } 
+    $calendar .= "<a class='btn btn-xs btn-success' href='?month=" . date('m', mktime(0, 0, 0, $month - 1, 1, $year)) . "&year=" . date('Y', mktime(0, 0, 0, $month - 1, 1, $year)) . "'>Previous Month</a> ";
+    $calendar .= " <a class='btn btn-xs btn-danger' href='?month=" . date('m') . "&year=" . date('Y') . "'>Current Month</a> ";
+    $calendar .= "<a class='btn btn-xs btn-primary' href='?month=" . date('m', mktime(0, 0, 0, $month + 1, 1, $year)) . "&year=" . date('Y', mktime(0, 0, 0, $month + 1, 1, $year)) . "'>Next Month</a></center><br>";
 
-     $currentDay = 1;
-     $calendar .= "</tr><tr>";
+    $calendar .= "<tr>";
+    foreach ($daysOfWeek as $day) {
+        $calendar .= "<th class='header'>$day</th>";
+    }
 
+    $currentDay = 1;
+    $calendar .= "</tr><tr>";
 
-     if ($dayOfWeek > 0) { 
-         for($k=0;$k<$dayOfWeek;$k++){
-                $calendar .= "<td  class='empty'></td>"; 
+    // Fill the empty cells for the first week
+    if ($dayOfWeek > 0) {
+        for ($k = 0; $k < $dayOfWeek; $k++) {
+            $calendar .= "<td class='empty'></td>";
+        }
+    }
 
-         }
-     }
+    // Define the time durations
+    $processTime = 14;  // processing time in days
+    $prepTime = 3;      // preparation time in days
+    $bufferTime = 3;    // buffer time in days
 
-     $processTime = 14;
-     $prepTime = 3;
-     $bufferTime = 3;
-    
-     $month = str_pad($month, 2, "0", STR_PAD_LEFT);
-  
-     while ($currentDay <= $numberDays) {
+    // Loop through the days of the month
+    while ($currentDay <= $numberDays) {
 
-          if ($dayOfWeek == 7) {
+        if ($dayOfWeek == 7) {
+            $dayOfWeek = 0;
+            $calendar .= "</tr><tr>";
+        }
 
-               $dayOfWeek = 0;
-               $calendar .= "</tr><tr>";
+        // Format the current date
+        $currentDayRel = str_pad($currentDay, 2, "0", STR_PAD_LEFT);
+        $date = "$year-$month-$currentDayRel";
 
-          }
-          
-          $currentDayRel = str_pad($currentDay, 2, "0", STR_PAD_LEFT);
-          $date = "$year-$month-$currentDayRel";
-          
-            $dayname = strtolower(date('l', strtotime($date)));
-            $eventNum = 0;
-            $today = $date==date('Y-m-d')? "today" : "";
-         if($date<date('Y-m-d')){
-             $calendar.="<td><h4>$currentDay</h4> <button class='btn btn-danger btn-xs' disabled>N/A</button>";
-         }elseif(in_array($date, $bookings)){
-             $calendar.="<td class='$today'><h4>$currentDay</h4> <button class='btn btn-danger btn-xs'> <span class='glyphicon glyphicon-lock
-             '></span> Already Booked</button>";
-         }else{
-             $calendar.="<td class='$today'><h4>$currentDay</h4> <a href='book.php?date=".$date."' class='btn btn-success btn-xs'> <span class='glyphicon glyphicon-ok'></span> Book Now</a>";
-         }
-            
-          $calendar .="</td>";
-          $currentDay++;
-          $dayOfWeek++;
-     }
+        // Initialize the availability flag
+        $isUnavailable = false;
 
-     if ($dayOfWeek != 7) { 
-     
-          $remainingDays = 7 - $dayOfWeek;
-            for($l=0;$l<$remainingDays;$l++){
-                $calendar .= "<td class='empty'></td>"; 
-         }
-     }
-     
-     $calendar .= "</tr>";
-     $calendar .= "</table>";
-     echo $calendar;
+        foreach ($bookings as $bookedDate) {
+            // Convert the booked date to DateTime
+            $bookedDateObj = new DateTime($bookedDate);
 
+            // Calculate the unavailable date range for this booking
+            $prepStartDate = clone $bookedDateObj;
+            $prepStartDate->sub(new DateInterval("P{$prepTime}D"));
+
+            $processEndDate = clone $bookedDateObj;
+            $processEndDate->add(new DateInterval("P{$processTime}D"));
+
+            $bufferEndDate = clone $processEndDate;
+            $bufferEndDate->add(new DateInterval("P{$bufferTime}D"));
+
+            $currentDateObj = new DateTime($date);
+            if ($currentDateObj >= $prepStartDate && $currentDateObj <= $bufferEndDate) {
+                $isUnavailable = true;
+                break;
+            }
+        }
+
+        // Display the correct button based on availability
+        $today = ($date == date('Y-m-d')) ? "today" : "";
+        if ($date < date('Y-m-d')) {
+            $calendar .= "<td><h4>$currentDay</h4> <button class='btn btn-danger btn-xs' disabled>N/A</button>";
+        } elseif ($isUnavailable) {
+            $calendar .= "<td class='$today'><h4>$currentDay</h4> <button class='btn btn-danger btn-xs'> <span class='glyphicon glyphicon-lock'></span> Already Booked</button>";
+        } else {
+            $calendar .= "<td class='$today'><h4>$currentDay</h4> <a href='book.php?date=" . $date . "' class='btn btn-success btn-xs'> <span class='glyphicon glyphicon-ok'></span> Book Now</a>";
+        }
+
+        $calendar .= "</td>";
+        $currentDay++;
+        $dayOfWeek++;
+    }
+
+    if ($dayOfWeek != 7) {
+        $remainingDays = 7 - $dayOfWeek;
+        for ($l = 0; $l < $remainingDays; $l++) {
+            $calendar .= "<td class='empty'></td>";
+        }
+    }
+
+    $calendar .= "</tr>";
+    $calendar .= "</table>";
+    echo $calendar;
 }
-    
 ?>
+
 
 <html lang="en">
   <head>
