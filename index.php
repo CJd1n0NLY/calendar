@@ -1,17 +1,21 @@
 <?php
 function build_calendar($month, $year) {
     $mysqli = new mysqli('localhost', 'root', '', 'bookingsystem');
-    $stmt = $mysqli->prepare("SELECT * FROM bookings_record WHERE MONTH(DATE) = ? AND YEAR(DATE) = ?");
-    $stmt->bind_param('ss', $month, $year);
+    
+    // Define processing, preparation, and buffer time
+    $processTime = 14;
+    $prepTime = 3;     
+    $bufferTime = 3;    
+
+    // Fetch all bookings regardless of the month
+    $stmt = $mysqli->prepare("SELECT * FROM bookings_record");
     $bookings = array();
     if ($stmt->execute()) {
         $result = $stmt->get_result();
-        if ($result->num_rows > 0) {
-            while ($row = $result->fetch_assoc()) {
-                $bookings[] = $row['DATE'];
-            }
-            $stmt->close();
+        while ($row = $result->fetch_assoc()) {
+            $bookings[] = $row['DATE'];
         }
+        $stmt->close();
     }
 
     // Set up day names and first day of the month
@@ -22,13 +26,42 @@ function build_calendar($month, $year) {
     $monthName = $dateComponents['month'];
     $dayOfWeek = $dateComponents['wday'];
 
-    $datetoday = date('Y-m-d');
+    // Array to hold unavailable date ranges dynamically
+    $unavailableDates = array();
+
+    // Loop through each booking and calculate unavailable date ranges
+    foreach ($bookings as $bookedDate) {
+        $bookedDateObj = new DateTime($bookedDate);
+
+        // Calculate the unavailable date range for this booking
+        $prepStartDate = clone $bookedDateObj;
+        $prepStartDate->sub(new DateInterval("P{$prepTime}D"));
+
+        $processEndDate = clone $bookedDateObj;
+        $processEndDate->add(new DateInterval("P{$processTime}D"));
+
+        $bufferEndDate = clone $processEndDate;
+        $bufferEndDate->add(new DateInterval("P{$bufferTime}D"));
+
+        // Add the entire range of unavailable dates into the unavailableDates array
+        $currentDate = $prepStartDate;
+        while ($currentDate <= $bufferEndDate) {
+            $unavailableDates[] = $currentDate->format('Y-m-d');
+            $currentDate->add(new DateInterval('P1D'));
+        }
+    }
+
+    // Remove duplicates from the unavailableDates array (to save memory)
+    $unavailableDates = array_unique($unavailableDates);
+
+    // Generate the calendar for the current month
     $calendar = "<table class='table table-bordered'>";
     $calendar .= "<center><h2>$monthName $year</h2>";
     $calendar .= "<a class='btn btn-xs btn-success' href='?month=" . date('m', mktime(0, 0, 0, $month - 1, 1, $year)) . "&year=" . date('Y', mktime(0, 0, 0, $month - 1, 1, $year)) . "'>Previous Month</a> ";
     $calendar .= " <a class='btn btn-xs btn-danger' href='?month=" . date('m') . "&year=" . date('Y') . "'>Current Month</a> ";
     $calendar .= "<a class='btn btn-xs btn-primary' href='?month=" . date('m', mktime(0, 0, 0, $month + 1, 1, $year)) . "&year=" . date('Y', mktime(0, 0, 0, $month + 1, 1, $year)) . "'>Next Month</a></center><br>";
 
+    // Day names row
     $calendar .= "<tr>";
     foreach ($daysOfWeek as $day) {
         $calendar .= "<th class='header'>$day</th>";
@@ -44,55 +77,32 @@ function build_calendar($month, $year) {
         }
     }
 
-    // Define the time durations
-    $processTime = 14;  // processing time in days
-    $prepTime = 3;      // preparation time in days
-    $bufferTime = 3;    // buffer time in days
-
-    // Loop through the days of the month
+    // Loop through each day of the month
     while ($currentDay <= $numberDays) {
-
         if ($dayOfWeek == 7) {
             $dayOfWeek = 0;
             $calendar .= "</tr><tr>";
         }
 
-        // Format the current date
         $currentDayRel = str_pad($currentDay, 2, "0", STR_PAD_LEFT);
         $date = "$year-$month-$currentDayRel";
 
-        // Initialize the availability flag
-        $isUnavailable = false;
+        $isUnavailable = in_array($date, $unavailableDates);
 
-        foreach ($bookings as $bookedDate) {
-            // Convert the booked date to DateTime
-            $bookedDateObj = new DateTime($bookedDate);
-
-            // Calculate the unavailable date range for this booking
-            $prepStartDate = clone $bookedDateObj;
-            $prepStartDate->sub(new DateInterval("P{$prepTime}D"));
-
-            $processEndDate = clone $bookedDateObj;
-            $processEndDate->add(new DateInterval("P{$processTime}D"));
-
-            $bufferEndDate = clone $processEndDate;
-            $bufferEndDate->add(new DateInterval("P{$bufferTime}D"));
-
-            $currentDateObj = new DateTime($date);
-            if ($currentDateObj >= $prepStartDate && $currentDateObj <= $bufferEndDate) {
-                $isUnavailable = true;
-                break;
-            }
-        }
-
-        // Display the correct button based on availability
         $today = ($date == date('Y-m-d')) ? "today" : "";
         if ($date < date('Y-m-d')) {
             $calendar .= "<td><h4>$currentDay</h4> <button class='btn btn-danger btn-xs' disabled>N/A</button>";
         } elseif ($isUnavailable) {
-            $calendar .= "<td class='$today'><h4>$currentDay</h4> <button class='btn btn-danger btn-xs'> <span class='glyphicon glyphicon-lock'></span> Already Booked</button>";
+            // Mark unavailable dates with a specific reason
+            $calendar .= "<td class='$today'><h4>$currentDay</h4> 
+            <button class='btn btn-danger btn-xs' title='Unavailable due to processing, preparation or buffer time'>
+                <span class='glyphicon glyphicon-lock'></span> Unavailable
+            </button>";
         } else {
-            $calendar .= "<td class='$today'><h4>$currentDay</h4> <a href='book.php?date=" . $date . "' class='btn btn-success btn-xs'> <span class='glyphicon glyphicon-ok'></span> Book Now</a>";
+            $calendar .= "<td class='$today'><h4>$currentDay</h4> 
+            <a href='book.php?date=" . $date . "' class='btn btn-success btn-xs'> 
+                <span class='glyphicon glyphicon-ok'></span> Book Now
+            </a>";
         }
 
         $calendar .= "</td>";
@@ -100,6 +110,7 @@ function build_calendar($month, $year) {
         $dayOfWeek++;
     }
 
+    // Fill the empty cells for the last week
     if ($dayOfWeek != 7) {
         $remainingDays = 7 - $dayOfWeek;
         for ($l = 0; $l < $remainingDays; $l++) {
@@ -109,148 +120,63 @@ function build_calendar($month, $year) {
 
     $calendar .= "</tr>";
     $calendar .= "</table>";
+
+    // Add a legend for the unavailable dates
+    $calendar .= "<div class='legend'>
+        <h4>Unavailable Date Legend:</h4>
+        <ul>
+            <li><span class='glyphicon glyphicon-lock' style='color: red;'></span> Unavailable due to processing, preparation or buffer time</li>
+            <li><button class='btn btn-danger btn-xs' disabled>N/A</button> Past date (not available for booking)</li>
+        </ul>
+    </div>";
+
     echo $calendar;
 }
 ?>
-
 
 <html lang="en">
   <head>
     <title>Online Booking System</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <link
-      rel="stylesheet"
-      href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css"
-    />
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css" />
     <style>
-      @media only screen and (max-width: 760px),
-        (min-device-width: 802px) and (max-device-width: 1020px) {
-        /* Force table to not be like tables anymore */
-        table,
-        thead,
-        tbody,
-        th,
-        td,
-        tr {
-          display: block;
-        }
-
-        .empty {
-          display: none;
-        }
-
-        /* Hide table headers (but not display: none;, for accessibility) */
-        th {
-          position: absolute;
-          top: -9999px;
-          left: -9999px;
-        }
-
-        tr {
-          border: 1px solid #ccc;
-        }
-
-        td {
-          /* Behave  like a "row" */
-          border: none;
-          border-bottom: 1px solid #eee;
-          position: relative;
-          padding-left: 50%;
-        }
-
-        /*
-		Label the data
-		*/
-        td:nth-of-type(1):before {
-          content: "Sunday";
-        }
-        td:nth-of-type(2):before {
-          content: "Monday";
-        }
-        td:nth-of-type(3):before {
-          content: "Tuesday";
-        }
-        td:nth-of-type(4):before {
-          content: "Wednesday";
-        }
-        td:nth-of-type(5):before {
-          content: "Thursday";
-        }
-        td:nth-of-type(6):before {
-          content: "Friday";
-        }
-        td:nth-of-type(7):before {
-          content: "Saturday";
-        }
-      }
-
-      /* Smartphones (portrait and landscape) ----------- */
-
-      @media only screen and (min-device-width: 320px) and (max-device-width: 480px) {
-        body {
-          padding: 0;
-          margin: 0;
-        }
-      }
-
-      /* iPads (portrait and landscape) ----------- */
-
-      @media only screen and (min-device-width: 802px) and (max-device-width: 1020px) {
-        body {
-          width: 495px;
-        }
-      }
-
-      @media (min-width: 641px) {
-        table {
-          table-layout: fixed;
-        }
-        td {
-          width: 33%;
-        }
-      }
-
-      .row {
+      /* Custom styles for the calendar and legend */
+      .legend {
         margin-top: 20px;
+        padding: 10px;
+        border: 1px solid #ccc;
+        background-color: #f9f9f9;
       }
-
-      .today {
-        background: #eee;
+      .legend ul {
+        list-style-type: none;
+        padding-left: 0;
+      }
+      .legend li {
+        margin-bottom: 5px;
       }
     </style>
   </head>
   <body>
       <div class="container">
-
-        <div class="row">     
-
+        <div class="row">
           <div class="col-md-12">
-
             <div class="alert alert-danger" style="background:#2ecc71;border:none;color:#fff;">
                 <h1>Booking Calendar</h1>
             </div>
-                <?php echo isset($message)?$message:'';?>
-
+                <?php echo isset($message) ? $message : ''; ?>
                 <?php 
                     $dateComponents = getdate();
                     if(isset($_GET['month']) && isset($_GET['year'])){
                         $month = $_GET['month'];
                         $year = $_GET['year'];
-                    }else{
+                    } else {
                         $month = $dateComponents['mon'];
                         $year = $dateComponents['year'];
                     }
                     echo build_calendar($month, $year);
                 ?>
-
-
           </div>
-
         </div>
-
       </div>
-
-
-
   </body>
 </html>
