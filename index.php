@@ -3,17 +3,17 @@ function build_calendar($month, $year) {
     $mysqli = new mysqli('localhost', 'root', '', 'bookingsystem');
     
     // Define processing, preparation, and buffer time
-    $processTime = 14;
-    $prepTime = 3;     
-    $bufferTime = 3;    
+    $processTime = 5; // in days
+    $prepTime = 3;     // in days     
+    $bufferTime = 2;   // in days    
 
-    // Fetch all bookings regardless of the month
+    // Fetch all bookings from the database
     $stmt = $mysqli->prepare("SELECT * FROM bookings_record");
     $bookings = array();
     if ($stmt->execute()) {
         $result = $stmt->get_result();
         while ($row = $result->fetch_assoc()) {
-            $bookings[] = $row['DATE'];
+            $bookings[] = $row;  // Store all booking details, including the date
         }
         $stmt->close();
     }
@@ -26,14 +26,14 @@ function build_calendar($month, $year) {
     $monthName = $dateComponents['month'];
     $dayOfWeek = $dateComponents['wday'];
 
-    // Array to hold unavailable date ranges dynamically
+    // Array to hold unavailable date ranges dynamically with types of unavailability
     $unavailableDates = array();
 
-    // Loop through each booking and calculate unavailable date ranges
-    foreach ($bookings as $bookedDate) {
-        $bookedDateObj = new DateTime($bookedDate);
+    // Loop through each booking and calculate unavailable date ranges with types
+    foreach ($bookings as $booked) {
+        $bookedDateObj = new DateTime($booked['DATE']);
 
-        // Calculate the unavailable date range for this booking
+        // Calculate the unavailable date range for this booking (prep, process, and buffer)
         $prepStartDate = clone $bookedDateObj;
         $prepStartDate->sub(new DateInterval("P{$prepTime}D"));
 
@@ -43,16 +43,19 @@ function build_calendar($month, $year) {
         $bufferEndDate = clone $processEndDate;
         $bufferEndDate->add(new DateInterval("P{$bufferTime}D"));
 
-        // Add the entire range of unavailable dates into the unavailableDates array
+        // Add unavailable dates into the array with specific reasons
         $currentDate = $prepStartDate;
         while ($currentDate <= $bufferEndDate) {
-            $unavailableDates[] = $currentDate->format('Y-m-d');
+            if ($currentDate < $bookedDateObj) {
+                $unavailableDates[$currentDate->format('Y-m-d')] = 'Preparation';
+            } elseif ($currentDate >= $bookedDateObj && $currentDate <= $processEndDate) {
+                $unavailableDates[$currentDate->format('Y-m-d')] = 'Processing';
+            } else {
+                $unavailableDates[$currentDate->format('Y-m-d')] = 'Buffer';
+            }
             $currentDate->add(new DateInterval('P1D'));
         }
     }
-
-    // Remove duplicates from the unavailableDates array (to save memory)
-    $unavailableDates = array_unique($unavailableDates);
 
     // Generate the calendar for the current month
     $calendar = "<table class='table table-bordered'>";
@@ -87,17 +90,22 @@ function build_calendar($month, $year) {
         $currentDayRel = str_pad($currentDay, 2, "0", STR_PAD_LEFT);
         $date = "$year-$month-$currentDayRel";
 
-        $isUnavailable = in_array($date, $unavailableDates);
+        $isUnavailable = isset($unavailableDates[$date]);
+        $unavailabilityReason = $isUnavailable ? $unavailableDates[$date] : null;
 
         $today = ($date == date('Y-m-d')) ? "today" : "";
         if ($date < date('Y-m-d')) {
-            $calendar .= "<td><h4>$currentDay</h4> <button class='btn btn-danger btn-xs' disabled>N/A</button>";
+            $calendar .= "<td><h4>$currentDay</h4> <button class='btn btn-danger btn-xs' disabled><span class='glyphicon glyphicon-remove'></span> N/A</button>";
         } elseif ($isUnavailable) {
-            // Mark unavailable dates with a specific reason
-            $calendar .= "<td class='$today'><h4>$currentDay</h4> 
-            <button class='btn btn-danger btn-xs' title='Unavailable due to processing, preparation or buffer time'>
-                <span class='glyphicon glyphicon-lock'></span> Unavailable
-            </button>";
+            // Different buttons based on unavailability reason
+            $calendar .= "<td class='$today'><h4>$currentDay</h4>";
+            if ($unavailabilityReason == 'Preparation') {
+                $calendar .= "<button class='btn btn-warning btn-xs' disabled><span class='glyphicon glyphicon-time'></span> Preparation</button>";
+            } elseif ($unavailabilityReason == 'Processing') {
+                $calendar .= "<button class='btn btn-danger btn-xs' disabled><span class='glyphicon glyphicon-lock'></span> Processing</button>";
+            } else {
+                $calendar .= "<button class='btn btn-info btn-xs' disabled><span class='glyphicon glyphicon-refresh'></span> Buffer</button>";
+            }
         } else {
             $calendar .= "<td class='$today'><h4>$currentDay</h4> 
             <a href='book.php?date=" . $date . "' class='btn btn-success btn-xs'> 
@@ -125,14 +133,18 @@ function build_calendar($month, $year) {
     $calendar .= "<div class='legend'>
         <h4>Unavailable Date Legend:</h4>
         <ul>
-            <li><span class='glyphicon glyphicon-lock' style='color: red;'></span> Unavailable due to processing, preparation or buffer time</li>
-            <li><button class='btn btn-danger btn-xs' disabled>N/A</button> Past date (not available for booking)</li>
+            <li><button class='btn btn-warning btn-xs' disabled><span class='glyphicon glyphicon-time'></span> Preparation</button> Unavailable due to preparation time</li>
+            <li><button class='btn btn-danger btn-xs' disabled><span class='glyphicon glyphicon-lock'></span> Processing</button> Unavailable due to processing time</li>
+            <li><button class='btn btn-info btn-xs' disabled><span class='glyphicon glyphicon-refresh'></span> Buffer</button> Unavailable due to buffer time</li>
+            <li><button class='btn btn-danger btn-xs' disabled><span class='glyphicon glyphicon-remove'></span> N/A</button> Past date (not available for booking)</li>
         </ul>
     </div>";
 
     echo $calendar;
 }
 ?>
+
+
 
 <html lang="en">
   <head>
