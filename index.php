@@ -3,17 +3,30 @@ function build_calendar($month, $year) {
     $mysqli = new mysqli('localhost', 'root', '', 'bookingsystem');
     
     // Define processing, preparation, and buffer time
-    $processTime = 5; // in days
-    $prepTime = 3;     // in days     
-    $bufferTime = 2;   // in days    
+    $processTime = 5;
+    $prepTime = 3;       
+    $bufferTime = 2;  
 
     // Fetch all bookings from the database
-    $stmt = $mysqli->prepare("SELECT * FROM bookings_record");
+    $stmt = $mysqli->prepare("
+        SELECT 
+            b.DATE,
+            s.processing_time,
+            s.preparation_time,
+            s.buffer_time
+        FROM 
+            bookings_record b
+        JOIN 
+            services s 
+        ON 
+            b.SERVICE_ID = s.id
+    ");
+
     $bookings = array();
     if ($stmt->execute()) {
         $result = $stmt->get_result();
         while ($row = $result->fetch_assoc()) {
-            $bookings[] = $row;  // Store all booking details, including the date
+            $bookings[] = $row;
         }
         $stmt->close();
     }
@@ -32,23 +45,26 @@ function build_calendar($month, $year) {
     // Loop through each booking and calculate unavailable date ranges with types
     foreach ($bookings as $booked) {
         $bookedDateObj = new DateTime($booked['DATE']);
-
-        // Calculate the unavailable date range for this booking (prep, process, and buffer)
+        $prepTime = $booked['preparation_time'];
+        $processTime = $booked['processing_time'];
+        $bufferTime = $booked['buffer_time']-1;
+    
+        // Calculate date ranges
         $prepStartDate = clone $bookedDateObj;
         $prepStartDate->sub(new DateInterval("P{$prepTime}D"));
-
+    
         $processEndDate = clone $bookedDateObj;
         $processEndDate->add(new DateInterval("P{$processTime}D"));
-
+    
         $bufferEndDate = clone $processEndDate;
         $bufferEndDate->add(new DateInterval("P{$bufferTime}D"));
-
-        // Add unavailable dates into the array with specific reasons
+    
+        // Add unavailable dates with reasons
         $currentDate = $prepStartDate;
         while ($currentDate <= $bufferEndDate) {
             if ($currentDate < $bookedDateObj) {
                 $unavailableDates[$currentDate->format('Y-m-d')] = 'Preparation';
-            } elseif ($currentDate >= $bookedDateObj && $currentDate <= $processEndDate) {
+            } elseif ($currentDate >= $bookedDateObj && $currentDate < $processEndDate) {
                 $unavailableDates[$currentDate->format('Y-m-d')] = 'Processing';
             } else {
                 $unavailableDates[$currentDate->format('Y-m-d')] = 'Buffer';
@@ -56,13 +72,20 @@ function build_calendar($month, $year) {
             $currentDate->add(new DateInterval('P1D'));
         }
     }
-
     // Generate the calendar for the current month
     $calendar = "<table class='table table-bordered'>";
+
+    $prevMonth = new DateTime("$year-$month-01");
+    $prevMonth->modify('-1 month');
+    $nextMonth = new DateTime("$year-$month-01");
+    $nextMonth->modify('+1 month');
+
     $calendar .= "<center><h2>$monthName $year</h2>";
-    $calendar .= "<a class='btn btn-xs btn-success' href='?month=" . date('m', mktime(0, 0, 0, $month - 1, 1, $year)) . "&year=" . date('Y', mktime(0, 0, 0, $month - 1, 1, $year)) . "'>Previous Month</a> ";
+    $calendar .= "<a class='btn btn-xs btn-success' href='?month=" . $prevMonth->format('m') . "&year=" . $prevMonth->format('Y') . "'>Previous Month</a>";
     $calendar .= " <a class='btn btn-xs btn-danger' href='?month=" . date('m') . "&year=" . date('Y') . "'>Current Month</a> ";
-    $calendar .= "<a class='btn btn-xs btn-primary' href='?month=" . date('m', mktime(0, 0, 0, $month + 1, 1, $year)) . "&year=" . date('Y', mktime(0, 0, 0, $month + 1, 1, $year)) . "'>Next Month</a></center><br>";
+    
+    $calendar .= "<a class='btn btn-xs btn-primary' href='?month=" . $nextMonth->format('m') . "&year=" . $nextMonth->format('Y') . "'>Next Month</a>";
+
 
     // Day names row
     $calendar .= "<tr>";
@@ -144,8 +167,6 @@ function build_calendar($month, $year) {
 }
 ?>
 
-
-
 <html lang="en">
   <head>
     <title>Online Booking System</title>
@@ -172,7 +193,7 @@ function build_calendar($month, $year) {
       <div class="container">
         <div class="row">
           <div class="col-md-12">
-            <div class="alert alert-danger" style="background:#2ecc71;border:none;color:#fff;">
+            <div class="text-center alert alert-danger" style="background:#1f242d;border:none;color:#fff;">
                 <h1>Booking Calendar</h1>
             </div>
                 <?php echo isset($message) ? $message : ''; ?>
