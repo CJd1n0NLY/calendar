@@ -81,10 +81,10 @@ function build_calendar($month, $year) {
     $nextMonth->modify('+1 month');
 
     $calendar .= "<center><h2>$monthName $year</h2>";
-    $calendar .= "<a class='btn btn-xs btn-success' href='?month=" . $prevMonth->format('m') . "&year=" . $prevMonth->format('Y') . "'>Previous Month</a>";
-    $calendar .= " <a class='btn btn-xs btn-danger' href='?month=" . date('m') . "&year=" . date('Y') . "'>Current Month</a> ";
+    $calendar .= "<div class='nav-container'><a class='btn btn-xs prev' href='?month=" . $prevMonth->format('m') . "&year=" . $prevMonth->format('Y') . "'>Prev</a>";
+    $calendar .= " <a class='btn btn-xs btn-primary' href='?month=" . date('m') . "&year=" . date('Y') . "'>Current Month</a> ";
     
-    $calendar .= "<a class='btn btn-xs btn-primary' href='?month=" . $nextMonth->format('m') . "&year=" . $nextMonth->format('Y') . "'>Next Month</a>";
+    $calendar .= "<a class='btn btn-xs next' href='?month=" . $nextMonth->format('m') . "&year=" . $nextMonth->format('Y') . "'>Next</a></div>";
 
 
     // Day names row
@@ -172,6 +172,7 @@ function build_calendar($month, $year) {
     <title>Online Booking System</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="index.css">
     <style>
       /* Custom styles for the calendar and legend */
       .legend {

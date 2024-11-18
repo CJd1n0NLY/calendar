@@ -1,0 +1,187 @@
+@import url(https://fonts.googleapis.com/css2?family=Michroma&display=swap);
+
+:root {
+    --background-color: #1f242d;
+    --accent-color: #0ef;
+    --text-color: #fff;
+    --nav-background-color: #11141a;
+    --button-background: #469eda;
+    --overlay-background: #333;
+    --text-color: #ffffff;
+    --button-color: rgb(8, 153, 197);
+    --button-hover-color: #0ad;
+    --activation-success-bg: #4CAF50;
+    --book-now-bg: rgba(95, 133, 155, 0.8);
+    --book-now-hover-bg: #0ef;
+    --primary-bg-color: #FFFFFF;
+    --primary-text-color: #000000;
+    --icon-color: #3e2093;
+    --input-bg-color: #F0F1F8;
+    --button-bg-color: #5f859bcb;
+    --button-hover-bg-color: #14a9ffcb;
+    --spinner-border-color: rgba(0, 0, 0, 0.534);
+    --spinner-highlight-color: rgb(8, 153, 197);
+    --overlay-bg-color: rgba(0, 0, 0, 0.5);
+    --overlay-text-color: aliceblue;
+
+    --btn-success-hover-bg: #26bd49;
+    --btn-danger-hover-bg: #dc3545;
+    --btn-primary-hover-bg: #007bff;
+    --btn-info-hover-bg: #007bff;
+    --btn-warning-hover-bg: #ffc107;
+
+    --table-empty-bg: rgba(212, 219, 226, 0.658);
+    --table-today-bg: rgba(212, 219, 226, 0.658);
+
+
+    --btn-success-bg: #218838;
+    --btn-danger-bg: #c82333;
+    --btn-primary-bg: #0056b3;
+    --btn-info-bg: #0056b3;
+    --btn-warning-bg: #c99806;
+}
+
+body {
+    background-color: var(--background-color) ;
+    color: #fff;
+}
+*{
+    font-family: 'Michroma', sans-serif;
+}
+
+.nav-container {
+    margin-top: 50px;
+}
+
+.next, .prev {
+    color: #fff;
+}
+
+.next:hover, .prev:hover {
+    color: #b4b0b0;
+}
+
+.table {
+    width: 100%;
+    margin-bottom: 20px;
+    border-collapse: collapse;
+    background-color: var(--overlay-text-color);
+    color: var(--text-color);
+}
+
+.table th {
+    background-color: var(--button-bg-color);
+    text-align: center;
+    font-size: 14px;
+    padding: 8px;
+    color: var(--overlay-bg-color);
+}
+
+.table td {
+    text-align: center;
+    padding: 10px;
+    vertical-align: middle;    
+    color: var(--overlay-bg-color);
+}
+
+.table .today {
+    background-color: var(--table-today-bg);
+}
+
+.table .empty {
+    background-color: var(--table-empty-bg);
+}
+
+.btn-success{
+    background-color: var(--btn-success-bg);
+    color: var(--text-color);
+    border-radius: 4px;
+    padding: 6px 12px;
+}
+
+.btn-primary{
+    background-color: var(--btn-primary-bg);
+    color: var(--text-color);
+    border-radius: 4px;
+    padding: 6px 12px;
+}
+
+.btn-danger{
+    background-color: var(--btn-danger-bg);
+    color: var(--text-color);
+    border-radius: 4px;
+    padding: 6px 12px;
+}
+
+.btn-warning{
+    background-color: var(--btn-warning-bg);
+    color: var(--text-color);
+    border-radius: 4px;
+    padding: 6px 12px;
+}
+
+.btn-info{
+    background-color: var(--btn-info-bg);
+    color: var(--text-color);
+    border-radius: 4px;
+    padding: 6px 12px;
+}
+
+.btn-success:hover{
+    background-color: var(--btn-success-hover-bg);
+}
+
+.btn-danger:hover{
+    background-color: var(--btn-danger-hover-bg);
+}
+
+.btn-warning:hover{
+    background-color: var(--btn-warning-hover-bg);
+}
+
+.btn-info:hover{
+    background-color: var(--btn-info-hover-bg);
+}
+
+/* Calendar Legend */
+.legend {
+    background-color: var(--primary-bg-color);
+    padding: 15px;
+    margin-top: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.legend ul {
+    list-style: none;
+    padding: 0;
+}
+
+.legend li {
+    margin: 10px 0;
+    color: var(--primary-text-color);
+}
+
+.legend button {
+    padding: 5px 10px;
+    border-radius: 4px;
+}
+
+.legend .btn-warning {
+    background-color: var(--btn-warning-bg);
+}
+
+.legend .btn-danger {
+    background-color: var(--btn-danger-bg);
+}
+
+.legend .btn-info {
+    background-color: var(--btn-info-bg);
+}
+
+.legend h4 {
+    font-size: 16px;
+    color: var(--primary-text-color);
+    font-style: bold;
+    margin-bottom: 30px;
+}

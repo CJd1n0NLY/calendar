@@ -33,7 +33,6 @@ if (isset($_POST['submit'])) {
 
     // Basic validation
     if (empty($fname)) $errors['FIRSTNAME'] = 'First name is required';
-    if (empty($mname)) $errors['MIDDLENAME'] = 'Middle name is required';
     if (empty($lname)) $errors['LASTNAME'] = 'Last name is required';
     if (empty($phone)) $errors['PHONE'] = 'Phone number is required';
     if (empty($email)) $errors['EMAIL'] = 'Email is required';
@@ -124,13 +123,15 @@ if (isset($_POST['submit'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Booking Form</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="book.css">
 </head>
 <body>
     <div class="container">
-        <h1 class="text-center alert alert-danger" style="background:#1f242d;border:none;color:#fff;">Book for Date: <?php echo $date ?></h1>
+        <h1 class="text-center alert alert-danger" style="background:#11141a;border:none;color:#fff;">Book for Date: <?php echo $date ?></h1>
         <div class="row">
             <div class="col-md-12">
                 <form action="" method="POST" autocomplete="off">
+
                     <?php if (!empty($errors)): ?>
                         <div class="alert alert-danger">
                             <ul>
@@ -152,9 +153,6 @@ if (isset($_POST['submit'])) {
                     <div class="form-group">
                         <label for=""> MIDDLE NAME</label>
                         <input type="text" class="form-control" name="MIDDLENAME">
-                        <?php if (isset($errors['MIDDLENAME'])): ?>
-                            <div class="text-danger"><?php echo $errors['MIDDLENAME']; ?></div>
-                        <?php endif; ?>
                     </div>
 
                     <div class="form-group">
@@ -204,19 +202,19 @@ if (isset($_POST['submit'])) {
                         <?php if (isset($errors['SERVICE_ID'])): ?>
                             <div class="text-danger"><?php echo $errors['SERVICE_ID']; ?></div>
                         <?php endif; ?>
+                        <div id="serviceDetails" style="display: none;">
+                            <p><strong>Price:</strong> <span id="servicePrice"></span></p>
+                            <p><strong>Description:</strong> <span id="serviceDescription"></span></p>
+                            <p><strong>Processing Time:</strong> <span id="serviceProcessingTime"></span></p>
+                            <p><strong>Preparation Time:</strong> <span id="servicePreparationTime"></span></p>
+                            <p><strong>Post-Process Time:</strong> <span id="serviceBufferTime"></span></p>
+                        </div>
                     </div>
 
-                    <div id="serviceDetails" style="display: none;">
-                        <p><strong>Price:</strong> <span id="servicePrice"></span></p>
-                        <p><strong>Description:</strong> <span id="serviceDescription"></span></p>
-                        <p><strong>Processing Time:</strong> <span id="serviceProcessingTime"></span></p>
-                        <p><strong>Preparation Time:</strong> <span id="servicePreparationTime"></span></p>
-                        <p><strong>Post-Process Time:</strong> <span id="serviceBufferTime"></span></p>
+                    <div class="submit-back-container">
+                        <button type="submit" name="submit" class="btn btn-primary">Submit</button>
+                        <a href="index.php" class="btn btn-success">Back</a>
                     </div>
-
-
-                    <button type="submit" name="submit" class="btn btn-primary">Submit</button>
-                    <a href="index.php" class="btn btn-success">Back</a>
                 </form>
             </div>
         </div>
