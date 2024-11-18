@@ -20,6 +20,9 @@ function build_calendar($month, $year) {
             services s 
         ON 
             b.SERVICE_ID = s.id
+        WHERE
+            b.STATUS = 'confirmed'
+        
     ");
 
     $bookings = array();
